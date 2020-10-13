@@ -1,5 +1,5 @@
 body {
-    background-image: url(/img/background_large.jpg);
+    background-image: url(img/background_large.jpg);
     -ms-background-size: cover;
     background-size: cover;
     background-position: 0 0;
