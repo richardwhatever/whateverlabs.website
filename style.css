@@ -1,63 +1,408 @@
-body {
-    background-image: url(img/background_large.jpg);
-    -ms-background-size: cover;
-    background-size: cover;
-    background-position: 0 0;
-    background-repeat: no-repeat;
-    color: #fff;
-    font-family: 'Lato', sans-serif;
-    padding: 80px 60px;
-    height: 100vh;
+/* ==========================================================================
+   Whatever Labs - Sitewide Stylesheet
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   CSS Variables
+   -------------------------------------------------------------------------- */
+:root {
+    --white: #ffffff;
+    --white-muted: rgba(255, 255, 255, 0.7);
+    --white-subtle: rgba(255, 255, 255, 0.4);
+    --white-faint: rgba(255, 255, 255, 0.15);
+    --white-ghost: rgba(255, 255, 255, 0.08);
+    --dark: #1a1a1a;
+    --error: #ff6b6b;
+    --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-header,
-main,
-footer {
-    width: 100%;
+/* --------------------------------------------------------------------------
+   Reset & Base
+   -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+}
+
+body {
+    font-family: 'Lato', sans-serif;
+    font-weight: 300;
+    background-image: url(img/background_large.jpg);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    min-height: 100vh;
+    color: var(--white);
+    padding: 60px 40px;
+    line-height: 1.6;
+}
+
+/* Subtle overlay for better text contrast */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(0, 0, 0, 0.2) 0%,
+        rgba(0, 0, 0, 0.4) 100%
+    );
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Layout
+   -------------------------------------------------------------------------- */
+.page {
+    position: relative;
+    z-index: 1;
     max-width: 890px;
     margin: 0 auto;
+    animation: fadeUp 0.8s var(--transition-smooth) both;
 }
 
-#logo {
-    width: 250px;
+/* --------------------------------------------------------------------------
+   Animations
+   -------------------------------------------------------------------------- */
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+}
+
+/* Staggered animation delays */
+.anim-delay-1 { animation: fadeUp 0.8s var(--transition-smooth) 0.1s both; }
+.anim-delay-2 { animation: fadeUp 0.8s var(--transition-smooth) 0.2s both; }
+.anim-delay-3 { animation: fadeUp 0.8s var(--transition-smooth) 0.3s both; }
+.anim-delay-4 { animation: fadeUp 0.8s var(--transition-smooth) 0.4s both; }
+.anim-delay-5 { animation: fadeUp 0.8s var(--transition-smooth) 0.5s both; }
+
+/* --------------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------------- */
+header {
+    margin-bottom: 80px;
+}
+
+.logo {
+    width: 200px;
+    opacity: 0.95;
+    transition: opacity 0.3s ease;
+}
+
+.logo:hover {
+    opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Typography
+   -------------------------------------------------------------------------- */
 h1 {
-    width: 100%;
+    font-size: 2rem;
+    font-weight: 300;
+    letter-spacing: -0.01em;
     max-width: 540px;
-    font-weight: normal;
-    margin: 90px 0 80px;
-    font-size: 32px;
 }
 
+.tagline {
+    color: var(--white-muted);
+    font-size: 1rem;
+    margin-bottom: 50px;
+}
+
+p {
+    color: var(--white-muted);
+    margin-bottom: 0.5em;
+}
+
+/* --------------------------------------------------------------------------
+   Links
+   -------------------------------------------------------------------------- */
 a {
-    color: #fff;
+    color: var(--white);
+    text-decoration: none;
+    transition: opacity 0.3s ease;
 }
 
+a:hover {
+    opacity: 0.8;
+}
+
+/* --------------------------------------------------------------------------
+   Main Content
+   -------------------------------------------------------------------------- */
+main {
+    max-width: 540px;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 28px;
+    font-family: 'Lato', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 400;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--white);
+    background: transparent;
+    border: 1px solid var(--white-subtle);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.btn:hover {
+    background: var(--white);
+    color: var(--dark);
+    border-color: var(--white);
+    opacity: 1;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-icon {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+/* --------------------------------------------------------------------------
+   Form Elements
+   -------------------------------------------------------------------------- */
+input[type="text"],
+input[type="url"],
+input[type="email"],
+textarea {
+    width: 100%;
+    padding: 18px 24px;
+    font-family: 'Lato', sans-serif;
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--white);
+    background: var(--white-ghost);
+    border: 1px solid var(--white-faint);
+    border-radius: 4px;
+    outline: none;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--white-subtle);
+}
+
+input:focus,
+textarea:focus {
+    background: var(--white-faint);
+    border-color: var(--white-subtle);
+    box-shadow: 0 0 0 1px var(--white-faint);
+}
+
+/* --------------------------------------------------------------------------
+   Error Messages
+   -------------------------------------------------------------------------- */
+.error-message {
+    display: none;
+    color: var(--error);
+    font-size: 0.85rem;
+    margin-top: 12px;
+    padding-left: 2px;
+}
+
+.error-message.visible {
+    display: block;
+    animation: shake 0.4s ease;
+}
+
+/* --------------------------------------------------------------------------
+   Footer
+   -------------------------------------------------------------------------- */
 footer {
-    margin-top: 150px;
+    margin-top: 120px;
+    padding-top: 40px;
+    border-top: 1px solid var(--white-ghost);
 }
 
-    footer > img {
-        margin: 0 14px 10px 0;
-    }
-
-@media(max-width: 768px) {
-
-
-    h1 {
-        font-size: 24px;
-    }
+.footer-content {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 30px;
 }
 
-@media(max-width: 320px) {
-    
+.footer-link {
+    color: var(--white-muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color 0.3s ease;
+}
+
+.footer-link:hover {
+    color: var(--white);
+    opacity: 1;
+}
+
+.footer-logos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 20px;
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.footer-logos:hover {
+    opacity: 0.9;
+}
+
+.footer-logos img {
+    height: 28px;
+    width: auto;
+}
+
+.separator {
+    width: 4px;
+    height: 4px;
+    background: var(--white-subtle);
+    border-radius: 50%;
+}
+
+/* --------------------------------------------------------------------------
+   Locations (Homepage)
+   -------------------------------------------------------------------------- */
+.locations {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 40px;
+    margin-top: 50px;
+}
+
+.location {
+    color: var(--white-muted);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.location strong {
+    display: block;
+    color: var(--white);
+    font-weight: 400;
+    margin-bottom: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive - Tablet
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
     body {
-        height: 100%;
+        padding: 40px 24px;
+    }
+
+    header {
+        margin-bottom: 60px;
+    }
+
+    .logo {
+        width: 160px;
     }
 
     h1 {
-        margin: 70px 0 60px;
-        font-size: 20px;
+        font-size: 1.6rem;
+    }
+
+    .tagline {
+        margin-bottom: 40px;
+    }
+
+    footer {
+        margin-top: 80px;
+    }
+
+    .locations {
+        gap: 30px;
+        margin-top: 40px;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive - Mobile
+   -------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+    body {
+        padding: 30px 20px;
+    }
+
+    header {
+        margin-bottom: 50px;
+    }
+
+    .logo {
+        width: 140px;
+    }
+
+    h1 {
+        font-size: 1.4rem;
+    }
+
+    input[type="text"],
+    input[type="url"],
+    input[type="email"],
+    textarea {
+        padding: 16px 18px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+
+    .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 16px 24px;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .separator {
+        display: none;
+    }
+
+    .locations {
+        flex-direction: column;
+        gap: 24px;
+        margin-top: 30px;
     }
 }
