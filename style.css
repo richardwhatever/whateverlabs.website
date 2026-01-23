@@ -274,6 +274,21 @@ footer {
     opacity: 1;
 }
 
+.footer-links {
+    margin-bottom: 30px;
+}
+
+.footer-links a {
+    color: var(--white-muted);
+    font-size: 0.85rem;
+    transition: color 0.3s ease;
+}
+
+.footer-links a:not(.btn):hover {
+    color: var(--white);
+    opacity: 1;
+}
+
 .footer-logos {
     display: flex;
     flex-wrap: wrap;
@@ -290,6 +305,7 @@ footer {
 .footer-logos img {
     height: 28px;
     width: auto;
+    filter: brightness(0) invert(1);
 }
 
 .separator {
@@ -320,6 +336,16 @@ footer {
     color: var(--white);
     font-weight: 400;
     margin-bottom: 4px;
+}
+
+.section-heading {
+    font-size: 0.75rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--white-subtle);
+    margin-top: 60px;
+    margin-bottom: 20px;
 }
 
 /* --------------------------------------------------------------------------
