@@ -36,6 +36,40 @@
         .input-wrapper {
             position: relative;
             margin-bottom: 24px;
+            display: flex;
+            gap: 0;
+        }
+
+        .protocol-select {
+            padding: 18px 12px;
+            font-family: 'Lato', sans-serif;
+            font-size: 1rem;
+            font-weight: 400;
+            color: var(--white);
+            background: var(--white-ghost);
+            border: 1px solid var(--white-faint);
+            border-right: none;
+            border-radius: 4px 0 0 4px;
+            outline: none;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            cursor: pointer;
+        }
+
+        .protocol-select:focus {
+            background: var(--white-faint);
+            border-color: var(--white-subtle);
+        }
+
+        .protocol-select option {
+            background: var(--dark);
+            color: var(--white);
+        }
+
+        .input-wrapper input[type="url"] {
+            border-radius: 0 4px 4px 0;
+            flex: 1;
         }
 
         /* QR Code display */
@@ -192,14 +226,18 @@
 
         <main>
             <h1 class="anim-delay-1">QR Code Generator</h1>
-            <p class="tagline anim-delay-2">Transform any URL into a scannable QR code</p>
+            <p class="tagline anim-delay-2">Start typing to transform any URL into a scannable QR code</p>
 
             <div class="input-section">
                 <div class="input-wrapper">
+                    <select id="protocolSelect" class="protocol-select">
+                        <option value="https://">https://</option>
+                        <option value="http://">http://</option>
+                    </select>
                     <input
-                        type="url"
+                        type="text"
                         id="urlInput"
-                        placeholder="https://example.com"
+                        placeholder="example.com"
                         autocomplete="url"
                         spellcheck="false"
                     >
@@ -259,6 +297,7 @@
     </div>
 
     <script>
+        const protocolSelect = document.getElementById('protocolSelect');
         const urlInput = document.getElementById('urlInput');
         const testLinkBtn = document.getElementById('testLinkBtn');
         const downloadBtn = document.getElementById('downloadBtn');
@@ -273,6 +312,12 @@
         let filenameManuallyEdited = false;
         let debounceTimer = null;
 
+        function getFullUrl() {
+            const input = urlInput.value.trim();
+            if (!input) return '';
+            return protocolSelect.value + input;
+        }
+
         function isValidUrl(string) {
             try {
                 const url = new URL(string);
@@ -283,7 +328,7 @@
         }
 
         function generateQRCode() {
-            const url = urlInput.value.trim();
+            const url = getFullUrl();
 
             if (!url || !isValidUrl(url)) {
                 // Hide QR container if URL is invalid
@@ -340,7 +385,7 @@
 
         function updateFilenameFromUrl() {
             if (!filenameManuallyEdited) {
-                const url = urlInput.value.trim();
+                const url = getFullUrl();
                 filenameInput.value = url ? generateFilenameFromUrl(url) : '';
             }
         }
@@ -369,7 +414,7 @@
         }
 
         function downloadSVG(filename) {
-            const url = currentUrl || urlInput.value.trim();
+            const url = currentUrl || getFullUrl();
 
             try {
                 if (typeof qrcode !== 'undefined') {
@@ -461,7 +506,7 @@
         }
 
         function getSVGData() {
-            const url = currentUrl || urlInput.value.trim();
+            const url = currentUrl || getFullUrl();
 
             return new Promise((resolve) => {
                 try {
@@ -535,7 +580,7 @@
         }
 
         async function downloadAllFormats() {
-            if (!currentUrl && !urlInput.value.trim()) {
+            if (!currentUrl && !getFullUrl()) {
                 alert('Please generate a QR code first.');
                 return;
             }
@@ -605,6 +650,12 @@
 
         // Generate QR code dynamically as user types
         urlInput.addEventListener('input', () => {
+            updateFilenameFromUrl();
+            debouncedGenerate();
+        });
+
+        // Regenerate when protocol changes
+        protocolSelect.addEventListener('change', () => {
             updateFilenameFromUrl();
             debouncedGenerate();
         });
