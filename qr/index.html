@@ -154,6 +154,22 @@
             pointer-events: none;
         }
 
+        .text-btn {
+            background: none;
+            border: none;
+            color: var(--white-muted);
+            font-family: 'Lato', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 0;
+            margin-bottom: 20px;
+            transition: color 0.3s ease;
+        }
+
+        .text-btn:hover {
+            color: var(--white);
+        }
+
         /* Responsive */
         @media (max-width: 480px) {
             .qr-frame {
@@ -187,21 +203,7 @@
                         autocomplete="url"
                         spellcheck="false"
                     >
-                    <p id="error" class="error-message">Please enter a valid URL</p>
                 </div>
-
-                <button class="btn" id="generateBtn">
-                    <svg class="btn-icon" viewBox="0 0 24 24">
-                        <rect x="3" y="3" width="7" height="7" rx="1"/>
-                        <rect x="14" y="3" width="7" height="7" rx="1"/>
-                        <rect x="3" y="14" width="7" height="7" rx="1"/>
-                        <rect x="14" y="14" width="3" height="3"/>
-                        <rect x="18" y="14" width="3" height="3"/>
-                        <rect x="14" y="18" width="3" height="3"/>
-                        <rect x="18" y="18" width="3" height="3"/>
-                    </svg>
-                    Generate
-                </button>
             </div>
 
             <div class="qr-section">
@@ -211,10 +213,13 @@
                     </div>
 
                     <div class="qr-actions">
-                        <p class="qr-url">
-                            <span>Encoded URL</span>
-                            <span id="displayUrl"></span>
-                        </p>
+                        <button class="text-btn" id="testLinkBtn">
+                            Test Link ↗
+                        </button>
+                        <div class="format-selector">
+                            <label for="filenameInput">Filename</label>
+                            <input type="text" id="filenameInput" class="format-select" placeholder="qr-code">
+                        </div>
                         <div class="format-selector">
                             <label for="formatSelect">Download Format</label>
                             <select id="formatSelect" class="format-select">
@@ -255,18 +260,18 @@
 
     <script>
         const urlInput = document.getElementById('urlInput');
-        const generateBtn = document.getElementById('generateBtn');
+        const testLinkBtn = document.getElementById('testLinkBtn');
         const downloadBtn = document.getElementById('downloadBtn');
         const downloadAllBtn = document.getElementById('downloadAllBtn');
         const formatSelect = document.getElementById('formatSelect');
+        const filenameInput = document.getElementById('filenameInput');
         const downloadBtnText = document.getElementById('downloadBtnText');
         const qrcodeDiv = document.getElementById('qrcode');
         const qrContainer = document.getElementById('qrContainer');
-        const errorMsg = document.getElementById('error');
-        const displayUrl = document.getElementById('displayUrl');
-
         let qrInstance = null;
         let currentUrl = '';
+        let filenameManuallyEdited = false;
+        let debounceTimer = null;
 
         function isValidUrl(string) {
             try {
@@ -280,17 +285,10 @@
         function generateQRCode() {
             const url = urlInput.value.trim();
 
-            errorMsg.classList.remove('visible');
-
-            if (!url) {
-                errorMsg.textContent = 'Please enter a URL';
-                errorMsg.classList.add('visible');
-                return;
-            }
-
-            if (!isValidUrl(url)) {
-                errorMsg.textContent = 'Please enter a valid URL starting with http:// or https://';
-                errorMsg.classList.add('visible');
+            if (!url || !isValidUrl(url)) {
+                // Hide QR container if URL is invalid
+                qrContainer.classList.remove('visible');
+                currentUrl = '';
                 return;
             }
 
@@ -310,16 +308,41 @@
             // Store current URL for download
             currentUrl = url;
 
-            // Update display URL
-            displayUrl.textContent = url.length > 50 ? url.substring(0, 50) + '...' : url;
-
             // Show container
             qrContainer.classList.add('visible');
         }
 
+        function testLink() {
+            if (currentUrl) {
+                window.open(currentUrl, '_blank');
+            }
+        }
+
+        function debouncedGenerate() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(generateQRCode, 300);
+        }
+
+        function generateFilenameFromUrl(url) {
+            return url
+                .replace(/^https?:\/\//, '')
+                .replace(/\/+$/, '')
+                .replace(/[^a-z0-9]/gi, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '')
+                .substring(0, 30)
+                .replace(/-$/, '');
+        }
+
         function getFilename() {
-            const url = currentUrl || urlInput.value.trim();
-            return url.replace(/^https?:\/\//, '').replace(/[^a-z0-9]/gi, '-').substring(0, 30);
+            return filenameInput.value.trim() || 'qr-code';
+        }
+
+        function updateFilenameFromUrl() {
+            if (!filenameManuallyEdited) {
+                const url = urlInput.value.trim();
+                filenameInput.value = url ? generateFilenameFromUrl(url) : '';
+            }
         }
 
         function downloadQRCode() {
@@ -576,19 +599,19 @@
             downloadBtnText.textContent = `Download ${format}`;
         });
 
-        generateBtn.addEventListener('click', generateQRCode);
+        testLinkBtn.addEventListener('click', testLink);
         downloadBtn.addEventListener('click', downloadQRCode);
         downloadAllBtn.addEventListener('click', downloadAllFormats);
 
-        urlInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                generateQRCode();
-            }
+        // Generate QR code dynamically as user types
+        urlInput.addEventListener('input', () => {
+            updateFilenameFromUrl();
+            debouncedGenerate();
         });
 
-        // Clear error on input
-        urlInput.addEventListener('input', () => {
-            errorMsg.classList.remove('visible');
+        // Track manual filename edits
+        filenameInput.addEventListener('input', () => {
+            filenameManuallyEdited = true;
         });
     </script>
 </body>
