@@ -9,6 +9,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
     <link href="../style.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
     <link rel="apple-touch-icon" sizes="60x60" href="../apple-touch-icon.png">
     <link rel="icon" type="image/png" href="../favicon-32x32.png" sizes="32x32">
@@ -104,6 +107,53 @@
             margin-bottom: 6px;
         }
 
+        .format-selector {
+            margin-bottom: 20px;
+        }
+
+        .format-selector label {
+            display: block;
+            color: var(--white-subtle);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+        }
+
+        .format-select {
+            width: 100%;
+            padding: 12px 16px;
+            font-family: 'Lato', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: var(--white);
+            background: var(--white-ghost);
+            border: 1px solid var(--white-faint);
+            border-radius: 4px;
+            outline: none;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            cursor: pointer;
+        }
+
+        .format-select:focus {
+            background: var(--white-faint);
+            border-color: var(--white-subtle);
+            box-shadow: 0 0 0 1px var(--white-faint);
+        }
+
+        .format-select option {
+            background: var(--dark);
+            color: var(--white);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
         /* Responsive */
         @media (max-width: 480px) {
             .qr-frame {
@@ -165,13 +215,29 @@
                             <span>Encoded URL</span>
                             <span id="displayUrl"></span>
                         </p>
+                        <div class="format-selector">
+                            <label for="formatSelect">Download Format</label>
+                            <select id="formatSelect" class="format-select">
+                                <option value="png">PNG (Raster)</option>
+                                <option value="svg">SVG (Vector)</option>
+                                <option value="pdf">PDF (Vector)</option>
+                            </select>
+                        </div>
                         <button class="btn" id="downloadBtn" style="margin-top: 20px;">
                             <svg class="btn-icon" viewBox="0 0 24 24">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                                 <polyline points="7 10 12 15 17 10"/>
                                 <line x1="12" y1="15" x2="12" y2="3"/>
                             </svg>
-                            Download PNG
+                            <span id="downloadBtnText">Download PNG</span>
+                        </button>
+                        <button class="btn" id="downloadAllBtn" style="margin-top: 12px;">
+                            <svg class="btn-icon" viewBox="0 0 24 24">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Download All Formats (ZIP)
                         </button>
                     </div>
                 </div>
@@ -191,12 +257,16 @@
         const urlInput = document.getElementById('urlInput');
         const generateBtn = document.getElementById('generateBtn');
         const downloadBtn = document.getElementById('downloadBtn');
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
+        const formatSelect = document.getElementById('formatSelect');
+        const downloadBtnText = document.getElementById('downloadBtnText');
         const qrcodeDiv = document.getElementById('qrcode');
         const qrContainer = document.getElementById('qrContainer');
         const errorMsg = document.getElementById('error');
         const displayUrl = document.getElementById('displayUrl');
 
-        let qrcode = null;
+        let qrInstance = null;
+        let currentUrl = '';
 
         function isValidUrl(string) {
             try {
@@ -228,7 +298,7 @@
             qrcodeDiv.innerHTML = '';
 
             // Generate new QR code
-            qrcode = new QRCode(qrcodeDiv, {
+            qrInstance = new QRCode(qrcodeDiv, {
                 text: url,
                 width: 200,
                 height: 200,
@@ -237,6 +307,9 @@
                 correctLevel: QRCode.CorrectLevel.H
             });
 
+            // Store current URL for download
+            currentUrl = url;
+
             // Update display URL
             displayUrl.textContent = url.length > 50 ? url.substring(0, 50) + '...' : url;
 
@@ -244,20 +317,268 @@
             qrContainer.classList.add('visible');
         }
 
+        function getFilename() {
+            const url = currentUrl || urlInput.value.trim();
+            return url.replace(/^https?:\/\//, '').replace(/[^a-z0-9]/gi, '-').substring(0, 30);
+        }
+
         function downloadQRCode() {
+            const format = formatSelect.value;
+            const filename = getFilename();
+
+            if (format === 'png') {
+                downloadPNG(filename);
+            } else if (format === 'svg') {
+                downloadSVG(filename);
+            } else if (format === 'pdf') {
+                downloadPDF(filename);
+            }
+        }
+
+        function downloadPNG(filename) {
             const canvas = qrcodeDiv.querySelector('canvas');
             if (canvas) {
                 const link = document.createElement('a');
-                const url = urlInput.value.trim();
-                const filename = url.replace(/^https?:\/\//, '').replace(/[^a-z0-9]/gi, '-').substring(0, 30);
                 link.download = `qr-${filename}.png`;
                 link.href = canvas.toDataURL('image/png');
                 link.click();
             }
         }
 
+        function downloadSVG(filename) {
+            const url = currentUrl || urlInput.value.trim();
+
+            try {
+                if (typeof qrcode !== 'undefined') {
+                    const qr = qrcode(0, 'H');
+                    qr.addData(url);
+                    qr.make();
+
+                    const moduleCount = qr.getModuleCount();
+                    const cellSize = Math.max(1, Math.floor(200 / moduleCount));
+                    const svgString = qr.createSvgTag(cellSize, 4).replace(/#000000/g, '#1a1a1a');
+
+                    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                    const blobUrl = URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.download = `qr-${filename}.svg`;
+                    link.href = blobUrl;
+                    link.click();
+                    URL.revokeObjectURL(blobUrl);
+                    return;
+                }
+            } catch (error) {
+                console.error('Error generating SVG with qrcode-generator:', error);
+            }
+
+            // Fallback: Generate SVG from canvas (embedded PNG)
+            // This creates a vector file that contains the raster image
+            const canvas = qrcodeDiv.querySelector('canvas');
+            if (canvas) {
+                const imgData = canvas.toDataURL('image/png');
+                const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="200" viewBox="0 0 200 200">
+    <image x="0" y="0" width="200" height="200" xlink:href="${imgData}"/>
+</svg>`;
+                const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.download = `qr-${filename}.svg`;
+                link.href = blobUrl;
+                link.click();
+                URL.revokeObjectURL(blobUrl);
+            } else {
+                alert('Error: QR code not found. Please generate a QR code first.');
+            }
+        }
+
+        function downloadPDF(filename) {
+            const canvas = qrcodeDiv.querySelector('canvas');
+            if (!canvas) return;
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: [80, 80]
+                });
+
+                // Get image data from canvas
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Calculate dimensions to fit in PDF (with padding)
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const padding = 5;
+                const imgWidth = pdfWidth - (padding * 2);
+                const imgHeight = imgWidth; // Square
+
+                // Add image to PDF
+                pdf.addImage(imgData, 'PNG', padding, padding, imgWidth, imgHeight);
+                
+                // Save PDF
+                pdf.save(`qr-${filename}.pdf`);
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert('Error generating PDF. Please try again.');
+            }
+        }
+
+        // Helper functions to get file data for zip
+        function getPNGData() {
+            const canvas = qrcodeDiv.querySelector('canvas');
+            if (!canvas) return null;
+            
+            return new Promise((resolve) => {
+                canvas.toBlob((blob) => {
+                    resolve(blob);
+                }, 'image/png');
+            });
+        }
+
+        function getSVGData() {
+            const url = currentUrl || urlInput.value.trim();
+
+            return new Promise((resolve) => {
+                try {
+                    if (typeof qrcode !== 'undefined') {
+                        const qr = qrcode(0, 'H');
+                        qr.addData(url);
+                        qr.make();
+
+                        const moduleCount = qr.getModuleCount();
+                        const cellSize = Math.max(1, Math.floor(200 / moduleCount));
+                        const svgString = qr.createSvgTag(cellSize, 4).replace(/#000000/g, '#1a1a1a');
+
+                        const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+                        resolve(blob);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error generating SVG with qrcode-generator:', error);
+                }
+
+                // Fallback: Generate SVG from canvas (embedded PNG)
+                const canvas = qrcodeDiv.querySelector('canvas');
+                if (canvas) {
+                    const imgData = canvas.toDataURL('image/png');
+                    const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="200" height="200" viewBox="0 0 200 200">
+    <image x="0" y="0" width="200" height="200" xlink:href="${imgData}"/>
+</svg>`;
+                    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+                    resolve(blob);
+                } else {
+                    resolve(null);
+                }
+            });
+        }
+
+        function getPDFData() {
+            const canvas = qrcodeDiv.querySelector('canvas');
+            if (!canvas) return Promise.resolve(null);
+
+            return new Promise((resolve, reject) => {
+                try {
+                    const { jsPDF } = window.jspdf;
+                    const pdf = new jsPDF({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: [80, 80]
+                    });
+
+                    // Get image data from canvas
+                    const imgData = canvas.toDataURL('image/png');
+                    
+                    // Calculate dimensions to fit in PDF (with padding)
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const padding = 5;
+                    const imgWidth = pdfWidth - (padding * 2);
+                    const imgHeight = imgWidth; // Square
+
+                    // Add image to PDF
+                    pdf.addImage(imgData, 'PNG', padding, padding, imgWidth, imgHeight);
+                    
+                    // Get PDF as blob
+                    const pdfBlob = pdf.output('blob');
+                    resolve(pdfBlob);
+                } catch (error) {
+                    console.error('Error generating PDF:', error);
+                    reject(error);
+                }
+            });
+        }
+
+        async function downloadAllFormats() {
+            if (!currentUrl && !urlInput.value.trim()) {
+                alert('Please generate a QR code first.');
+                return;
+            }
+
+            const filename = getFilename();
+            
+            // Disable button during generation
+            downloadAllBtn.disabled = true;
+            const originalText = downloadAllBtn.innerHTML;
+            downloadAllBtn.innerHTML = '<span>Generating ZIP...</span>';
+
+            try {
+                // Check if JSZip is available
+                if (typeof JSZip === 'undefined') {
+                    alert('Error: JSZip library not loaded. Please refresh the page.');
+                    return;
+                }
+
+                const zip = new JSZip();
+
+                // Get all format data
+                const [pngData, svgData, pdfData] = await Promise.all([
+                    getPNGData(),
+                    getSVGData(),
+                    getPDFData()
+                ]);
+
+                // Add files to zip
+                if (pngData) {
+                    zip.file(`qr-${filename}.png`, pngData);
+                }
+                if (svgData) {
+                    zip.file(`qr-${filename}.svg`, svgData);
+                }
+                if (pdfData) {
+                    zip.file(`qr-${filename}.pdf`, pdfData);
+                }
+
+                // Generate zip file
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                
+                // Download zip
+                const link = document.createElement('a');
+                link.download = `qr-${filename}-all-formats.zip`;
+                link.href = URL.createObjectURL(zipBlob);
+                link.click();
+                URL.revokeObjectURL(link.href);
+            } catch (error) {
+                console.error('Error creating zip file:', error);
+                alert('Error creating zip file. Please try again.');
+            } finally {
+                // Re-enable button
+                downloadAllBtn.disabled = false;
+                downloadAllBtn.innerHTML = originalText;
+            }
+        }
+
+        // Update download button text when format changes
+        formatSelect.addEventListener('change', () => {
+            const format = formatSelect.value.toUpperCase();
+            downloadBtnText.textContent = `Download ${format}`;
+        });
+
         generateBtn.addEventListener('click', generateQRCode);
         downloadBtn.addEventListener('click', downloadQRCode);
+        downloadAllBtn.addEventListener('click', downloadAllFormats);
 
         urlInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
