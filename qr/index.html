@@ -67,9 +67,69 @@
             color: var(--white);
         }
 
-        .input-wrapper input[type="url"] {
+        .input-wrapper input[type="text"] {
             border-radius: 0 4px 4px 0;
             flex: 1;
+        }
+
+        .url-status {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            font-size: 0.85rem;
+        }
+
+        .url-status.visible {
+            display: flex;
+        }
+
+        .url-status .indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .url-status.success .indicator {
+            background: #4ade80;
+            box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+        }
+
+        .url-status.error .indicator {
+            background: #f87171;
+            box-shadow: 0 0 8px rgba(248, 113, 113, 0.5);
+        }
+
+        .url-status.checking .indicator {
+            background: var(--white-subtle);
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        .url-status.warning .indicator {
+            background: #fbbf24;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        .url-status .message {
+            color: var(--white-muted);
+        }
+
+        .url-status.success .message {
+            color: #4ade80;
+        }
+
+        .url-status.error .message {
+            color: #f87171;
+        }
+
+        .url-status.warning .message {
+            color: #fbbf24;
         }
 
         /* QR Code display */
@@ -242,6 +302,10 @@
                         spellcheck="false"
                     >
                 </div>
+                <div class="url-status" id="urlStatus">
+                    <span class="indicator"></span>
+                    <span class="message" id="urlStatusMessage"></span>
+                </div>
             </div>
 
             <div class="qr-section">
@@ -307,10 +371,14 @@
         const downloadBtnText = document.getElementById('downloadBtnText');
         const qrcodeDiv = document.getElementById('qrcode');
         const qrContainer = document.getElementById('qrContainer');
+        const urlStatus = document.getElementById('urlStatus');
+        const urlStatusMessage = document.getElementById('urlStatusMessage');
         let qrInstance = null;
         let currentUrl = '';
         let filenameManuallyEdited = false;
         let debounceTimer = null;
+        let urlCheckTimer = null;
+        let lastCheckedUrl = '';
 
         function getFullUrl() {
             const input = urlInput.value.trim();
@@ -325,6 +393,82 @@
             } catch {
                 return false;
             }
+        }
+
+        function setUrlStatus(status, message) {
+            urlStatus.className = 'url-status';
+            if (status) {
+                urlStatus.classList.add('visible', status);
+            }
+            urlStatusMessage.textContent = message;
+        }
+
+        async function checkUrl() {
+            const url = getFullUrl();
+
+            if (!url || !isValidUrl(url)) {
+                setUrlStatus('', '');
+                return;
+            }
+
+            // Don't re-check the same URL
+            if (url === lastCheckedUrl) return;
+            lastCheckedUrl = url;
+
+            setUrlStatus('checking', 'Checking URL...');
+
+            // Try direct request first
+            try {
+                const response = await fetch(url, { method: 'HEAD' });
+                return handleResponse(response);
+            } catch (error) {
+                // CORS blocked - try proxy
+            }
+
+            // Try with CORS proxy
+            try {
+                const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+                const response = await fetch(proxyUrl, { method: 'HEAD' });
+                return handleResponse(response);
+            } catch (error) {
+                // Proxy also failed - try checking if domain exists via image load
+                checkDomainExists(url);
+            }
+        }
+
+        function handleResponse(response) {
+            if (response.ok) {
+                setUrlStatus('success', 'URL working');
+            } else if (response.status === 404) {
+                setUrlStatus('error', 'Page not found (404)');
+            } else if (response.status >= 400) {
+                setUrlStatus('error', `Error: ${response.status}`);
+            } else {
+                setUrlStatus('warning', `Status: ${response.status}`);
+            }
+        }
+
+        function checkDomainExists(url) {
+            // Fallback: try to load favicon to verify domain exists
+            const img = new Image();
+            const urlObj = new URL(url);
+            const faviconUrl = `${urlObj.protocol}//${urlObj.host}/favicon.ico`;
+
+            img.onload = () => setUrlStatus('success', 'Domain reachable');
+            img.onerror = () => setUrlStatus('warning', 'Cannot verify status');
+            img.src = faviconUrl;
+
+            // Timeout after 5 seconds
+            setTimeout(() => {
+                if (urlStatus.classList.contains('checking')) {
+                    setUrlStatus('warning', 'Cannot verify status');
+                }
+            }, 5000);
+        }
+
+        function debouncedCheckUrl() {
+            clearTimeout(urlCheckTimer);
+            urlCheckTimer = setTimeout(checkUrl, 1500);
         }
 
         function generateQRCode() {
@@ -652,12 +796,16 @@
         urlInput.addEventListener('input', () => {
             updateFilenameFromUrl();
             debouncedGenerate();
+            lastCheckedUrl = ''; // Reset so URL gets re-checked
+            debouncedCheckUrl();
         });
 
         // Regenerate when protocol changes
         protocolSelect.addEventListener('change', () => {
             updateFilenameFromUrl();
             debouncedGenerate();
+            lastCheckedUrl = ''; // Reset so URL gets re-checked
+            debouncedCheckUrl();
         });
 
         // Track manual filename edits
