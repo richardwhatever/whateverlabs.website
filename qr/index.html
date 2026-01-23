@@ -72,16 +72,40 @@
             flex: 1;
         }
 
-        .url-status {
+        .url-preview {
             display: none;
-            align-items: center;
-            gap: 8px;
-            margin-top: 12px;
+            margin-top: 16px;
+            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
             font-size: 0.85rem;
+            color: var(--white-subtle);
+            word-break: break-all;
         }
 
-        .url-status.visible {
+        .url-preview.visible {
+            display: block;
+        }
+
+        .url-status-row {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 12px;
+            gap: 16px;
+        }
+
+        .url-status-row.visible {
             display: flex;
+        }
+
+        .url-status-row .text-btn {
+            margin-bottom: 0;
+        }
+
+        .url-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
         }
 
         .url-status .indicator {
@@ -264,6 +288,17 @@
             color: var(--white);
         }
 
+        .download-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .download-buttons .btn {
+            flex: 1;
+            justify-content: center;
+        }
+
         /* Responsive */
         @media (max-width: 480px) {
             .qr-frame {
@@ -302,9 +337,13 @@
                         spellcheck="false"
                     >
                 </div>
-                <div class="url-status" id="urlStatus">
-                    <span class="indicator"></span>
-                    <span class="message" id="urlStatusMessage"></span>
+                <code class="url-preview" id="urlPreview"></code>
+                <div class="url-status-row" id="urlStatusRow">
+                    <div class="url-status" id="urlStatus">
+                        <span class="indicator"></span>
+                        <span class="message" id="urlStatusMessage"></span>
+                    </div>
+                    <button class="text-btn" id="testLinkBtn">Test Link ↗</button>
                 </div>
             </div>
 
@@ -315,29 +354,15 @@
                     </div>
 
                     <div class="qr-actions">
-                        <button class="text-btn" id="testLinkBtn">
-                            Test Link ↗
-                        </button>
                         <div class="format-selector">
                             <label for="filenameInput">Filename</label>
                             <input type="text" id="filenameInput" class="format-select" placeholder="qr-code">
                         </div>
-                        <div class="format-selector">
-                            <label for="formatSelect">Download Format</label>
-                            <select id="formatSelect" class="format-select">
-                                <option value="png">PNG (Raster)</option>
-                                <option value="svg">SVG (Vector)</option>
-                                <option value="pdf">PDF (Vector)</option>
-                            </select>
+                        <div class="download-buttons">
+                            <button class="btn" id="downloadPngBtn">PNG</button>
+                            <button class="btn" id="downloadSvgBtn">SVG</button>
+                            <button class="btn" id="downloadPdfBtn">PDF</button>
                         </div>
-                        <button class="btn" id="downloadBtn" style="margin-top: 20px;">
-                            <svg class="btn-icon" viewBox="0 0 24 24">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                <polyline points="7 10 12 15 17 10"/>
-                                <line x1="12" y1="15" x2="12" y2="3"/>
-                            </svg>
-                            <span id="downloadBtnText">Download PNG</span>
-                        </button>
                         <button class="btn" id="downloadAllBtn" style="margin-top: 12px;">
                             <svg class="btn-icon" viewBox="0 0 24 24">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -364,15 +389,17 @@
         const protocolSelect = document.getElementById('protocolSelect');
         const urlInput = document.getElementById('urlInput');
         const testLinkBtn = document.getElementById('testLinkBtn');
-        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadPngBtn = document.getElementById('downloadPngBtn');
+        const downloadSvgBtn = document.getElementById('downloadSvgBtn');
+        const downloadPdfBtn = document.getElementById('downloadPdfBtn');
         const downloadAllBtn = document.getElementById('downloadAllBtn');
-        const formatSelect = document.getElementById('formatSelect');
         const filenameInput = document.getElementById('filenameInput');
-        const downloadBtnText = document.getElementById('downloadBtnText');
         const qrcodeDiv = document.getElementById('qrcode');
         const qrContainer = document.getElementById('qrContainer');
         const urlStatus = document.getElementById('urlStatus');
         const urlStatusMessage = document.getElementById('urlStatusMessage');
+        const urlPreview = document.getElementById('urlPreview');
+        const urlStatusRow = document.getElementById('urlStatusRow');
         let qrInstance = null;
         let currentUrl = '';
         let filenameManuallyEdited = false;
@@ -395,10 +422,24 @@
             }
         }
 
+        function updateUrlPreview() {
+            const url = getFullUrl();
+            if (url && isValidUrl(url)) {
+                urlPreview.textContent = url;
+                urlPreview.classList.add('visible');
+                urlStatusRow.classList.add('visible');
+                // Show waiting state immediately
+                setUrlStatus('checking', 'Checking URL...');
+            } else {
+                urlPreview.classList.remove('visible');
+                urlStatusRow.classList.remove('visible');
+            }
+        }
+
         function setUrlStatus(status, message) {
             urlStatus.className = 'url-status';
             if (status) {
-                urlStatus.classList.add('visible', status);
+                urlStatus.classList.add(status);
             }
             urlStatusMessage.textContent = message;
         }
@@ -531,19 +572,6 @@
             if (!filenameManuallyEdited) {
                 const url = getFullUrl();
                 filenameInput.value = url ? generateFilenameFromUrl(url) : '';
-            }
-        }
-
-        function downloadQRCode() {
-            const format = formatSelect.value;
-            const filename = getFilename();
-
-            if (format === 'png') {
-                downloadPNG(filename);
-            } else if (format === 'svg') {
-                downloadSVG(filename);
-            } else if (format === 'pdf') {
-                downloadPDF(filename);
             }
         }
 
@@ -782,18 +810,15 @@
             }
         }
 
-        // Update download button text when format changes
-        formatSelect.addEventListener('change', () => {
-            const format = formatSelect.value.toUpperCase();
-            downloadBtnText.textContent = `Download ${format}`;
-        });
-
         testLinkBtn.addEventListener('click', testLink);
-        downloadBtn.addEventListener('click', downloadQRCode);
+        downloadPngBtn.addEventListener('click', () => downloadPNG(getFilename()));
+        downloadSvgBtn.addEventListener('click', () => downloadSVG(getFilename()));
+        downloadPdfBtn.addEventListener('click', () => downloadPDF(getFilename()));
         downloadAllBtn.addEventListener('click', downloadAllFormats);
 
         // Generate QR code dynamically as user types
         urlInput.addEventListener('input', () => {
+            updateUrlPreview();
             updateFilenameFromUrl();
             debouncedGenerate();
             lastCheckedUrl = ''; // Reset so URL gets re-checked
@@ -802,6 +827,7 @@
 
         // Regenerate when protocol changes
         protocolSelect.addEventListener('change', () => {
+            updateUrlPreview();
             updateFilenameFromUrl();
             debouncedGenerate();
             lastCheckedUrl = ''; // Reset so URL gets re-checked
